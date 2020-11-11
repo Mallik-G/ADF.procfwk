@@ -42,7 +42,7 @@ BEGIN
 		)
 	SELECT
 		[LocalExecutionId],
-		[JobId]
+		[JobId],
 		[StageId],
 		[PipelineId],
 		[CallingDataFactoryName],

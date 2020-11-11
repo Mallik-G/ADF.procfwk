@@ -12,6 +12,8 @@ Post-Deployment Script Template
 --load default metadata
 :r .\Metadata\Properties.sql
 :r .\Metadata\DataFactorys.sql
+:r .\Metadata\Jobs.sql
+:r .\Metadata\JobProperties.sql
 :r .\Metadata\Stages.sql
 :r .\Metadata\Pipelines.sql
 :r .\Metadata\PipelineParams.sql

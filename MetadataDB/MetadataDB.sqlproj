@@ -209,6 +209,8 @@
     <Build Include="procfwkHelpers\Stored Procedures\SetDefaultJobProperties.sql" />
     <Build Include="procfwkHelpers\Stored Procedures\SetDefaultJobs.sql" />
     <Build Include="procfwkHelpers\Stored Procedures\AddJobProperty.sql" />
+    <None Include="Scripts\Metadata\Jobs.sql" />
+    <None Include="Scripts\Metadata\JobProperties.sql" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="Scripts\Script.PostDeployment.sql" />

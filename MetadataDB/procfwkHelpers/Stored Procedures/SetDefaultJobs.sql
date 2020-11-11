@@ -15,8 +15,9 @@ BEGIN
 		[Enabled]
 		) 
 	VALUES 
-		('IngestSalesData', N'Ingest all datafeeds related to Sales source system.', 1),
-		('ServeMarketingData', N'Transform data on data related to Marketing source system.', 1)
+		('Daily Sales Ingestion Job', N'Ingest all datafeeds related to Sales source system.', 1),
+		('Daily Marketing Egression Job', N'Transform and extract data on datalake related to Marketing source system.', 1),
+		('Weekly Campaign Ingestion Job', N'Ingest all datafeeds related to Campaign source system.', 1);
 		
 	MERGE INTO [procfwk].[Jobs] AS tgt
 	USING 
