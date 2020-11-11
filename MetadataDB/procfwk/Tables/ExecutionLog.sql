@@ -1,6 +1,7 @@
 ﻿CREATE TABLE [procfwk].[ExecutionLog] (
     [LogId]            INT              IDENTITY (1, 1) NOT NULL,
     [LocalExecutionId] UNIQUEIDENTIFIER NOT NULL,
+    [JobId]            INT              NOT NULL,
     [StageId]          INT              NOT NULL,
     [PipelineId]       INT              NOT NULL,
     [CallingDataFactoryName] NVARCHAR(200) NOT NULL DEFAULT ('Unknown'),

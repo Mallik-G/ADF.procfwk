@@ -1,11 +1,12 @@
 ﻿CREATE PROCEDURE [procfwkHelpers].[GetExecutionDetails]
 	(
+	@JobId INT,
 	@LocalExecutionId UNIQUEIDENTIFIER = NULL
 	)
 AS
 BEGIN
 
-	--Get last execution ID
+	--Get last execution ID for the given job if not passed as param
 	IF @LocalExecutionId IS NULL
 	BEGIN
 		WITH maxLog AS
@@ -14,13 +15,15 @@ BEGIN
 				MAX([LogId]) AS MaxLogId
 			FROM
 				[procfwk].[ExecutionLog]
+			WHERE 
+				[JobId] = @JobId
 			)
 		SELECT
 			@LocalExecutionId = el1.[LocalExecutionId]
 		FROM
 			[procfwk].[ExecutionLog] el1
-			INNER JOIN maxLog
-				ON maxLog.[MaxLogId] = el1.[LogId];
+		INNER JOIN maxLog
+			ON maxLog.[MaxLogId] = el1.[LogId];
 	END;
 
 	--Execution Summary
@@ -30,8 +33,8 @@ BEGIN
 		DATEDIFF(MINUTE, MIN(el2.[StartDateTime]), MAX(el2.[EndDateTime])) DurationMinutes
 	FROM
 		[procfwk].[ExecutionLog] el2
-		INNER JOIN [procfwk].[Stages] stgs
-			ON el2.[StageId] = stgs.[StageId]
+	INNER JOIN [procfwk].[Stages] stgs
+		ON el2.[StageId] = stgs.[StageId]
 	WHERE
 		el2.[LocalExecutionId] = @LocalExecutionId
 	GROUP BY
@@ -43,6 +46,8 @@ BEGIN
 	SELECT
 		el3.[LogId],
 		el3.[LocalExecutionId],
+		el3.[JobId],
+		jobs.[JobName],
 		el3.[StageId],
 		stgs.[StageName],
 		el3.[PipelineId],
@@ -66,6 +71,8 @@ BEGIN
 				AND el3.[AdfPipelineRunId] = errLog.[AdfPipelineRunId]
 		INNER JOIN [procfwk].[Stages] stgs
 			ON el3.[StageId] = stgs.[StageId]
+		INNER JOIN [procfwk].[Jobs] jobs
+		    ON el3.[JobId] = jobs.[JobId]
 	WHERE
 		el3.[LocalExecutionId] = @LocalExecutionId
 	ORDER BY

@@ -1,17 +1,23 @@
 ﻿CREATE PROCEDURE [procfwkHelpers].[CheckStageAndPiplineIntegrity]
+	(
+	@JobId INT
+	)
 AS
-
 BEGIN
 
 	DECLARE @TempCheckStageAndPiplineIntegrity TABLE
 		(
 		[ResourceGroupName] NVARCHAR(200) NOT NULL,
 		[DataFactoryName] NVARCHAR(200) NOT NULL,
+		[JobId] INT NOT NULL,
+		[JobName] VARCHAR(225) NOT NULL,
 		[StageId] INT NOT NULL,
 		[StageName] VARCHAR(225) NOT NULL,
 		[PipelineId] INT NOT NULL,
 		[PipelineName] NVARCHAR(200) NOT NULL,
 		[Enabled] BIT NOT NULL,
+		[SuccessorJobId] INT NOT NULL,
+		[SuccessorJobName] VARCHAR(225) NOT NULL,
 		[SuccessorStageId] INT NULL,
 		[SuccessorStage] VARCHAR(225) NULL,
 		[SuccessorId] INT NULL,
@@ -26,17 +32,23 @@ BEGIN
 			MIN([StageId]) AS firstStageId
 		FROM
 			[procfwk].[Stages]
+		WHERE
+			[JobId] = @JobId
 		)
 	--query metadata
 	INSERT INTO @TempCheckStageAndPiplineIntegrity
 	SELECT
 		adf.[ResourceGroupName],
 		adf.[DataFactoryName],	
+		baseStage.[JobId],
+		baseStage.[JobName],
 		base.[StageId],
 		baseStage.[StageName],
 		base.[PipelineId],
 		base.[PipelineName],
 		base.[Enabled],
+		predsStage.[JobId] AS SuccessorJobId,
+		predsStage.[JobName] AS SuccessorJobName,
 		preds.[StageId] AS SuccessorStageId,
 		predsStage.[StageName] AS SuccessorStage,
 		preds.[PipelineId] AS SuccessorId,
@@ -54,12 +66,24 @@ BEGIN
 		[procfwk].[Pipelines] base
 		INNER JOIN [procfwk].[DataFactorys] adf
 			ON base.[DataFactoryId] = adf.[DataFactoryId]
-		INNER JOIN [procfwk].[Stages] baseStage
-			ON base.[StageId] = baseStage.[StageId]	
+		INNER JOIN (
+			SELECT j.[JobName], s.*
+			FROM [procfwk].[Stages] s
+			JOIN [procfwk].[Jobs] j
+				ON j.[JobId] = s.[JobId]
+			WHERE s.[JobId] = @JobId
+		) baseStage
+			ON base.[StageId] = baseStage.[StageId]
 		--get successor details
 		LEFT OUTER JOIN [procfwk].[Pipelines] preds
 			ON base.[PipelineId] = preds.[LogicalPredecessorId]
-		LEFT OUTER JOIN [procfwk].[Stages] predsStage
+		LEFT OUTER JOIN (
+			SELECT j.[JobName], s.*
+			FROM [procfwk].[Stages] s
+			JOIN [procfwk].[Jobs] j
+				ON j.[JobId] = s.[JobId]
+			WHERE s.[JobId] = @JobId
+		) predsStage
 			ON preds.[StageId] = predsStage.[StageId]
 		--other details for checking
 		CROSS JOIN firstStage
@@ -74,7 +98,7 @@ BEGIN
 		END
 	ELSE
 		BEGIN
-			PRINT 'No pipeline integrity issues to report. Nice work! :-)'
+			PRINT 'No pipeline integrity issues to report for the given job. Nice work! :-)'
 		END
 END;
 

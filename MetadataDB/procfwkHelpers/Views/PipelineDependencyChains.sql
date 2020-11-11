@@ -2,8 +2,10 @@
 AS
 
 SELECT 
+	ps.[JobId] AS PredecessorJobId,
 	ps.[StageName] AS PredecessorStage,
 	pp.[PipelineName] AS PredecessorPipeline,
+	ds.[JobId] AS DependantJobId,
 	ds.[StageName] AS DependantStage,
 	dp.[PipelineName] AS DependantPipeline
 FROM 

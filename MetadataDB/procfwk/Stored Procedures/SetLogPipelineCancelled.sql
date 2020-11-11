@@ -1,6 +1,7 @@
 ﻿CREATE PROCEDURE [procfwk].[SetLogPipelineCancelled]
 	(
 	@ExecutionId UNIQUEIDENTIFIER,
+	@JobId INT,
 	@StageId INT,
 	@PipelineId INT,
 	@CleanUpRun BIT = 0
@@ -28,6 +29,7 @@ BEGIN
 	INSERT INTO [procfwk].[ExecutionLog]
 		(
 		[LocalExecutionId],
+		[JobId],
 		[StageId],
 		[PipelineId],
 		[CallingDataFactoryName],
@@ -42,6 +44,7 @@ BEGIN
 		)
 	SELECT
 		[LocalExecutionId],
+		[JobId],
 		[StageId],
 		[PipelineId],
 		[CallingDataFactoryName],
@@ -56,21 +59,23 @@ BEGIN
 	FROM
 		[procfwk].[CurrentExecution]
 	WHERE
-		[PipelineStatus] = 'Cancelled'
+		[LocalExecutionId] = @ExecutionId
+		AND [PipelineStatus] = 'Cancelled'
 		AND [StageId] = @StageId
 		AND [PipelineId] = @PipelineId;
 
 	--block down stream stages?
+	-- TO DO: Should this be a job property or controlled as framework level property to ensure all jobs handle same way?
 	IF ([procfwk].[GetPropertyValueInternal]('CancelledWorkerResultBlocks')) = 1
 	BEGIN	
 		--decide how to proceed with error/failure depending on framework property configuration
-		IF ([procfwk].[GetPropertyValueInternal]('FailureHandling')) = 'None'
+		IF ([procfwk].[GetJobPropertyValueInternal](@JobId, 'FailureHandling')) = 'None'
 			BEGIN
 				--do nothing allow processing to carry on regardless
 				RETURN 0;
 			END;
 
-		ELSE IF ([procfwk].[GetPropertyValueInternal]('FailureHandling')) = 'Simple'
+		ELSE IF ([procfwk].[GetJobPropertyValueInternal](@JobId, 'FailureHandling')) = 'Simple'
 			BEGIN
 				--flag all downstream stages as blocked
 				UPDATE
@@ -87,7 +92,7 @@ BEGIN
 				RAISERROR(@ErrorDetail,16,1);
 				RETURN 0;
 			END;
-		ELSE IF ([procfwk].[GetPropertyValueInternal]('FailureHandling')) = 'DependencyChain'
+		ELSE IF ([procfwk].[GetJobPropertyValueInternal](@JobId, 'FailureHandling')) = 'DependencyChain'
 			BEGIN
 				EXEC [procfwk].[SetExecutionBlockDependants]
 					@ExecutionId = @ExecutionId,

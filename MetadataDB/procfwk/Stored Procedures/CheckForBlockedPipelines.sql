@@ -1,5 +1,6 @@
 ﻿CREATE PROCEDURE [procfwk].[CheckForBlockedPipelines]
 	(
+	@JobId INT,
 	@ExecutionId UNIQUEIDENTIFIER,
 	@StageId INT
 	)
@@ -7,13 +8,13 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 
-	IF ([procfwk].[GetPropertyValueInternal]('FailureHandling')) = 'None'
+	IF ([procfwk].[GetJobPropertyValueInternal](@JobId, 'FailureHandling')) = 'None'
 		BEGIN
 			--do nothing allow processing to carry on regardless
 			RETURN 0;
 		END;
 		
-	ELSE IF ([procfwk].[GetPropertyValueInternal]('FailureHandling')) = 'Simple'
+	ELSE IF ([procfwk].[GetJobPropertyValueInternal](@JobId, 'FailureHandling')) = 'Simple'
 		BEGIN
 			IF EXISTS
 				(
@@ -34,7 +35,7 @@ BEGIN
 				END			
 		END;
 	
-	ELSE IF ([procfwk].[GetPropertyValueInternal]('FailureHandling')) = 'DependencyChain'
+	ELSE IF ([procfwk].[GetJobPropertyValueInternal](@JobId, 'FailureHandling')) = 'DependencyChain'
 		BEGIN
 			IF EXISTS
 				(

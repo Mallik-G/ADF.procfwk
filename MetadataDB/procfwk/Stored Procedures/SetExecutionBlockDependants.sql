@@ -1,13 +1,10 @@
 ﻿CREATE PROCEDURE [procfwk].[SetExecutionBlockDependants]
 	(
-	@ExecutionId UNIQUEIDENTIFIER = NULL,
+	@ExecutionId UNIQUEIDENTIFIER,
 	@PipelineId INT
 	)
 AS
-BEGIN
-	--assume current execution if value not provided
-	IF @ExecutionId IS NULL SELECT TOP 1 @ExecutionId = [LocalExecutionId] FROM [procfwk].[CurrentExecution];
-	
+BEGIN	
 	--update dependents status
 	UPDATE
 		ce

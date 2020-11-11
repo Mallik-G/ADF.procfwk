@@ -1,6 +1,7 @@
 ﻿CREATE PROCEDURE [procfwk].[UpdateExecutionLog]
 	(
-	@PerformErrorCheck BIT = 1
+		@JobId INT,
+		@PerformErrorCheck BIT = 1
 	)
 AS
 BEGIN
@@ -12,8 +13,8 @@ BEGIN
 	IF @PerformErrorCheck = 1
 	BEGIN
 		--Check current execution
-		SELECT @AllCount = COUNT(0) FROM [procfwk].[CurrentExecution]
-		SELECT @SuccessCount = COUNT(0) FROM [procfwk].[CurrentExecution] WHERE [PipelineStatus] = 'Success'
+		SELECT @AllCount = COUNT(0) FROM [procfwk].[CurrentExecution] WHERE [JobId] = @JobId
+		SELECT @SuccessCount = COUNT(0) FROM [procfwk].[CurrentExecution] WHERE [JobId] = @JobId AND [PipelineStatus] = 'Success'
 
 		IF @AllCount <> @SuccessCount
 			BEGIN
@@ -26,6 +27,7 @@ BEGIN
 	INSERT INTO [procfwk].[ExecutionLog]
 		(
 		[LocalExecutionId],
+		[JobId],
 		[StageId],
 		[PipelineId],
 		[CallingDataFactoryName],
@@ -40,6 +42,7 @@ BEGIN
 		)
 	SELECT
 		[LocalExecutionId],
+		[JobId]
 		[StageId],
 		[PipelineId],
 		[CallingDataFactoryName],
@@ -52,7 +55,10 @@ BEGIN
 		[AdfPipelineRunId],
 		[PipelineParamsUsed]
 	FROM
-		[procfwk].[CurrentExecution];
+		[procfwk].[CurrentExecution]
+	WHERE [JobId] = @JobId;
 
-	TRUNCATE TABLE [procfwk].[CurrentExecution];
+	DELETE FROM [procfwk].[CurrentExecution] 
+	WHERE [JobId] = @JobId;
+
 END;

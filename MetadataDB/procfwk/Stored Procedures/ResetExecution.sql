@@ -1,4 +1,7 @@
 ﻿CREATE PROCEDURE [procfwk].[ResetExecution]
+	(
+		@JobId INT
+	)
 AS
 BEGIN 
 	SET NOCOUNT	ON;
@@ -7,6 +10,7 @@ BEGIN
 	INSERT INTO [procfwk].[ExecutionLog]
 		(
 		[LocalExecutionId],
+		[JobId],
 		[StageId],
 		[PipelineId],
 		[CallingDataFactoryName],
@@ -19,6 +23,7 @@ BEGIN
 		)
 	SELECT
 		[LocalExecutionId],
+		[JobId],
 		[StageId],
 		[PipelineId],
 		[CallingDataFactoryName],
@@ -31,6 +36,8 @@ BEGIN
 	FROM
 		[procfwk].[CurrentExecution]
 	WHERE
+		[JobId] = @JobId
+	AND
 		--these are predicted states
 		[PipelineStatus] NOT IN
 			(
@@ -52,12 +59,16 @@ BEGIN
 		[PipelineParamsUsed] = NULL,
 		[IsBlocked] = 0
 	WHERE
-		ISNULL([PipelineStatus],'') <> 'Success'
-		OR [IsBlocked] = 1;
+		[JobId] = @JobId
+	AND
+		(ISNULL([PipelineStatus],'') <> 'Success'
+		OR [IsBlocked] = 1);
 	
 	--return current execution id
 	SELECT DISTINCT
 		[LocalExecutionId] AS ExecutionId
 	FROM
-		[procfwk].[CurrentExecution];
+		[procfwk].[CurrentExecution]
+	WHERE 
+		[JobId] = @JobId;
 END;

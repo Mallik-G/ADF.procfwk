@@ -18,7 +18,7 @@ BEGIN
 		END
 
 	--ErrorLog
-	IF OBJECT_ID(N'[procfwk].[ExecutionLog]') IS NOT NULL 
+	IF OBJECT_ID(N'[procfwk].[ErrorLog]') IS NOT NULL 
 		BEGIN
 			TRUNCATE TABLE [procfwk].[ErrorLog];
 		END

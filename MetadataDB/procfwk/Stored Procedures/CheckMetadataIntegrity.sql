@@ -1,30 +1,32 @@
 CREATE PROCEDURE [procfwk].[CheckMetadataIntegrity]
 	(
-	@DebugMode BIT = 0
+		@JobId INT,
+		@DebugMode BIT = 0
 	)
 AS
 BEGIN
 	SET NOCOUNT ON;
 	
 	/*
-	Check 1 - Are there execution stages enabled in the metadata?
-	Check 2 - Are there pipelines enabled in the metadata?
-	Check 3 - Are there any service principals available to run the processing pipelines?
-	Check 4 - Is there at least one TenantId available?
-	Check 5 - Is there at least one SubscriptionId available?
-	Check 6 - Is there a current OverideRestart property available?
-	Check 7 - Are there any enabled pipelines configured without a service principal?
-	Check 8 - Are any Data Factorys set to use the default subscription value?
-	Check 9 - Are any Subscription set to use the default tenant value?
-	Check 10 - Is there a current PipelineStatusCheckDuration property available?
-	Check 11 - Is there a current UseFrameworkEmailAlerting property available?
-	Check 12 - Is there a current EmailAlertBodyTemplate property available?
-	Check 13 - Does the total size of the request body for the pipeline parameters added exceed the Azure Functions size limit when the Worker execute pipeline body is created?
-	Check 14 - Is there a current FailureHandling property available?
-	Check 15 - Does the FailureHandling property have a valid value?
-	Check 16 - When using DependencyChain failure handling, are there any dependants in the same execution stage of the predecessor?
-	Check 17 - Does the SPNHandlingMethod property have a valid value?
-	Check 18 - Does the Service Principal table contain both types of SPN handling for a single credential?
+	Check 1 - Is the Job enabled in the metadata?
+	Check 2 - Are there execution stages enabled for the job in the metadata?
+	Check 3 - Are there pipelines enabled in the metadata?
+	Check 4 - Are there any service principals available to run the processing pipelines?
+	Check 5 - Is there at least one TenantId available?
+	Check 6 - Is there at least one SubscriptionId available?
+	Check 7 - Is there a current OverideRestart property available?
+	Check 8 - Are there any enabled pipelines configured without a service principal?
+	Check 9 - Are any Data Factorys set to use the default subscription value?
+	Check 10 - Are any Subscription set to use the default tenant value?
+	Check 11 - Is there a current PipelineStatusCheckDuration property available?
+	Check 12 - Is there a current UseFrameworkEmailAlerting property available?
+	Check 13- Is there a current EmailAlertBodyTemplate property available?
+	Check 14 - Does the total size of the request body for the pipeline parameters added exceed the Azure Functions size limit when the Worker execute pipeline body is created?
+	Check 15 - Is there a current FailureHandling property available?
+	Check 16 - Does the FailureHandling property have a valid value?
+	Check 17 - When using DependencyChain failure handling, are there any dependants in the same execution stage of the predecessor?
+	Check 18 - Does the SPNHandlingMethod property have a valid value?
+	Check 19 - Does the Service Principal table contain both types of SPN handling for a single credential?
 	---------------------------------------------------------------------------------------------------------------------------------
 	Check A: - Are there any Running pipelines that need to be cleaned up?
 	*/
@@ -39,36 +41,55 @@ BEGIN
 	/*
 	Checks:
 	*/
-
 	--Check 1:
 	IF NOT EXISTS
 		(
-		SELECT 1 FROM [procfwk].[Stages] WHERE [Enabled] = 1
+		SELECT 1 FROM [procfwk].[Jobs] WHERE [JobId] = @JobId AND [Enabled] = 1
 		)
 		BEGIN
 			INSERT INTO @MetadataIntegrityIssues
 			VALUES
 				( 
 				1,
-				'No execution stages are enabled within the metadatabase. Data Factory has nothing to run.'
+				'Job is disabled within the metadatabase. Data Factory has nothing to run.'
 				)
 		END;
 
 	--Check 2:
 	IF NOT EXISTS
 		(
-		SELECT 1 FROM [procfwk].[Pipelines] WHERE [Enabled] = 1
+		SELECT 1 FROM [procfwk].[Stages] WHERE [JobId] = @JobId AND [Enabled] = 1
 		)
 		BEGIN
 			INSERT INTO @MetadataIntegrityIssues
 			VALUES
 				( 
 				2,
-				'No execution pipelines are enabled within the metadatabase. Data Factory has nothing to run.'
+				'No execution stages are enabled within the metadatabase. Data Factory has nothing to run.'
 				)
 		END;
 
 	--Check 3:
+	IF NOT EXISTS
+		(
+		SELECT 1 
+		FROM [procfwk].[Pipelines] p
+		JOIN [procfwk].[Stages] s
+			ON p.[StageId] = s.[StageId]
+		WHERE 
+			p.[Enabled] = 1
+		AND s.[JobId] = @JobId
+		)
+		BEGIN
+			INSERT INTO @MetadataIntegrityIssues
+			VALUES
+				( 
+				3,
+				'No execution pipelines are enabled within the metadatabase. Data Factory has nothing to run.'
+				)
+		END;
+
+	--Check 4:
 	IF NOT EXISTS 
 		(
 		SELECT 1 FROM [dbo].[ServicePrincipals]
@@ -82,7 +103,7 @@ BEGIN
 				)		
 		END;
 
-	--Check 4:
+	--Check 5:
 	IF NOT EXISTS
 		(
 		SELECT * FROM [procfwk].[Tenants]
@@ -96,7 +117,7 @@ BEGIN
 				)		
 		END;
 
-	--Check 5:
+	--Check 6:
 	IF NOT EXISTS
 		(
 		SELECT * FROM [procfwk].[Subscriptions]
@@ -110,21 +131,21 @@ BEGIN
 				)		
 		END;
 
-	--Check 6:
+	--Check 7:
 	IF NOT EXISTS
 		(
-		SELECT * FROM [procfwk].[CurrentProperties] WHERE [PropertyName] = 'OverideRestart'
+		SELECT * FROM [procfwk].[CurrentJobProperties] WHERE [JobId] = @JobId AND [PropertyName] = 'OverideRestart'
 		)
 		BEGIN
 			INSERT INTO @MetadataIntegrityIssues
 			VALUES
 				( 
 				6,
-				'A current OverideRestart value is missing from the properties table.'
+				'A current OverideRestart value is missing from the job properties table for this job.'
 				)		
 		END;
 
-	--Check 7:
+	--Check 8:
 	IF EXISTS
 		( 
 		SELECT 
@@ -146,7 +167,7 @@ BEGIN
 				)		
 		END;
 
-	--Check 8:
+	--Check 9:
 	IF EXISTS
 		(
 		SELECT * FROM [procfwk].[DataFactorys] WHERE [SubscriptionId] = '12345678-1234-1234-1234-012345678910'
@@ -160,7 +181,7 @@ BEGIN
 				)		
 		END;
 
-	--Check 9:
+	--Check 10:
 	IF EXISTS
 		(
 		SELECT * FROM [procfwk].[Subscriptions] WHERE [TenantId] = '12345678-1234-1234-1234-012345678910' AND [SubscriptionId] <> '12345678-1234-1234-1234-012345678910'
@@ -174,7 +195,7 @@ BEGIN
 				)		
 		END;
 
-	--Check 10:
+	--Check 11:
 	IF NOT EXISTS
 		(
 		SELECT * FROM [procfwk].[CurrentProperties] WHERE [PropertyName] = 'PipelineStatusCheckDuration'
@@ -188,7 +209,7 @@ BEGIN
 				)		
 		END;
 
-	--Check 11:
+	--Check 12:
 	IF NOT EXISTS
 		(
 		SELECT * FROM [procfwk].[CurrentProperties] WHERE [PropertyName] = 'UseFrameworkEmailAlerting'
@@ -202,7 +223,7 @@ BEGIN
 				)		
 		END;
 
-	--Check 12:
+	--Check 13:
 	IF (
 		SELECT
 			[PropertyValue]
@@ -226,7 +247,7 @@ BEGIN
 				END;
 		END;
 
-	--Check 13:
+	--Check 14:
 	IF EXISTS
 		(
 		SELECT * FROM [procfwk].[PipelineParameterDataSizes] WHERE [Size] > 9
@@ -245,7 +266,7 @@ BEGIN
 				)	
 		END;
 
-	--Check 14:
+	--Check 15:
 	IF NOT EXISTS
 		(
 		SELECT * FROM [procfwk].[CurrentProperties] WHERE [PropertyName] = 'FailureHandling'
@@ -259,7 +280,7 @@ BEGIN
 				)		
 		END;
 
-	--Check 15:
+	--Check 16:
 	IF NOT EXISTS
 		(
 		SELECT 
@@ -279,7 +300,7 @@ BEGIN
 				)	
 		END;
 
-	--Check 16:
+	--Check 17:
 	IF ([procfwk].[GetPropertyValueInternal]('FailureHandling')) = 'DependencyChain'
 	BEGIN
 		IF EXISTS
@@ -305,7 +326,7 @@ BEGIN
 		END;
 	END;
 
-	--Check 17:
+	--Check 18:
 	IF NOT EXISTS
 		(
 		SELECT 
@@ -325,7 +346,7 @@ BEGIN
 				)	
 		END;
 
-	--Check 18:
+	--Check 19:
 	IF EXISTS
 		(
 		SELECT
@@ -393,7 +414,10 @@ BEGIN
 	--Check A:
 	IF EXISTS
 		(
-		SELECT [LocalExecutionId] FROM [procfwk].[CurrentExecution] WHERE [PipelineStatus] NOT IN ('Success','Failed','Blocked', 'Cancelled') AND [AdfPipelineRunId] IS NOT NULL
+		SELECT [LocalExecutionId] FROM [procfwk].[CurrentExecution] 
+		WHERE [JobId] = @JobId 
+		AND [PipelineStatus] NOT IN ('Success','Failed','Blocked', 'Cancelled') 
+		AND [AdfPipelineRunId] IS NOT NULL
 		)
 		BEGIN
 			--return pipelines details that require a clean up
@@ -408,7 +432,8 @@ BEGIN
 			FROM 
 				[procfwk].[CurrentExecution]
 			WHERE 
-				[PipelineStatus] NOT IN ('Success','Failed','Blocked','Cancelled') 
+				[JobId] = @JobId 
+				AND [PipelineStatus] NOT IN ('Success','Failed','Blocked','Cancelled') 
 				AND [AdfPipelineRunId] IS NOT NULL
 		END;
 	ELSE

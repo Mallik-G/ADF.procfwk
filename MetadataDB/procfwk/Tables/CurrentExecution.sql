@@ -1,5 +1,6 @@
 ﻿CREATE TABLE [procfwk].[CurrentExecution] (
     [LocalExecutionId] UNIQUEIDENTIFIER NOT NULL,
+    [JobId]          INT            NOT NULL,
     [StageId]          INT              NOT NULL,
     [PipelineId]       INT              NOT NULL,
     [CallingDataFactoryName] NVARCHAR(200) NOT NULL,
@@ -13,12 +14,13 @@
     [IsBlocked] BIT NOT NULL DEFAULT 0,
     [AdfPipelineRunId] UNIQUEIDENTIFIER NULL,
     [PipelineParamsUsed] NVARCHAR(MAX) NULL, 
-    CONSTRAINT [PK_CurrentExecution] PRIMARY KEY CLUSTERED ([LocalExecutionId] ASC, [StageId] ASC, [PipelineId] ASC)
+    CONSTRAINT [PK_CurrentExecution] PRIMARY KEY CLUSTERED ([LocalExecutionId] ASC, [JobId] ASC, [StageId] ASC, [PipelineId] ASC)
 );
 GO
 
 CREATE NONCLUSTERED INDEX [IDX_GetPipelinesInStage] ON [procfwk].[CurrentExecution]
     (
+    [JobId],
     [StageId],
     [PipelineStatus]
     )

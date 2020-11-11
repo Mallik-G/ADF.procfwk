@@ -201,6 +201,14 @@
     <Build Include="procfwkHelpers\Stored Procedures\SetDefaultTenant.sql" />
     <Build Include="procfwkHelpers\Stored Procedures\GetServicePrincipal.sql" />
     <Build Include="dbo\Stored Procedures\DemoModePrecursor.sql" />
+    <Build Include="procfwk\Tables\JobProperties.sql" />
+    <Build Include="procfwk\Tables\Jobs.sql" />
+    <Build Include="procfwk\Functions\GetJobPropertyValueInternal.sql" />
+    <Build Include="procfwk\Stored Procedures\GetJobPropertyValue.sql" />
+    <Build Include="procfwk\Views\CurrentJobProperties.sql" />
+    <Build Include="procfwkHelpers\Stored Procedures\SetDefaultJobProperties.sql" />
+    <Build Include="procfwkHelpers\Stored Procedures\SetDefaultJobs.sql" />
+    <Build Include="procfwkHelpers\Stored Procedures\AddJobProperty.sql" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="Scripts\Script.PostDeployment.sql" />

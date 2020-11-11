@@ -1,6 +1,7 @@
 ﻿CREATE PROCEDURE [procfwk].[ExecutionWrapper]
 	(
-	@CallingDataFactory NVARCHAR(200)
+	@CallingDataFactory NVARCHAR(200),
+	@JobId INT
 	)
 AS
 BEGIN
@@ -12,22 +13,22 @@ BEGIN
 		SET @CallingDataFactory = 'Unknown';
 
 	--get restart overide property	
-	SELECT @RestartStatus = [procfwk].[GetPropertyValueInternal]('OverideRestart')
+	SELECT @RestartStatus = [procfwk].[GetJobPropertyValueInternal](@JobId, 'OverideRestart')
 
 	--check for running execution
 	IF EXISTS
 		(
-		SELECT * FROM [procfwk].[CurrentExecution] WHERE ISNULL([PipelineStatus],'') = 'Running'
+		SELECT * FROM [procfwk].[CurrentExecution] WHERE [JobId] = @JobId AND ISNULL([PipelineStatus],'') = 'Running'
 		)
 		BEGIN
-			RAISERROR('There is already an execution run in progress. Stop this via Data Factory before restarting.',16,1);
+			RAISERROR('There is already an execution run in progress for this job. Stop this via Data Factory before restarting.',16,1);
 			RETURN 0;
 		END;	
 
 	--reset and restart execution
 	IF EXISTS
 		(
-		SELECT * FROM [procfwk].[CurrentExecution] WHERE ISNULL([PipelineStatus],'') <> 'Success'
+		SELECT * FROM [procfwk].[CurrentExecution] WHERE [JobId] = @JobId AND ISNULL([PipelineStatus],'') <> 'Success'
 		) 
 		AND @RestartStatus = 0
 		BEGIN
@@ -36,29 +37,34 @@ BEGIN
 	--capture failed execution and run new anyway
 	ELSE IF EXISTS
 		(
-		SELECT * FROM [procfwk].[CurrentExecution]
+		SELECT * FROM [procfwk].[CurrentExecution] WHERE [JobId] = @JobId
 		)
 		AND @RestartStatus = 1
 		BEGIN
 			EXEC [procfwk].[UpdateExecutionLog]
+				@JobId = @JobId,
 				@PerformErrorCheck = 0; --Special case when OverideRestart = 1;
 
 			EXEC [procfwk].[CreateNewExecution] 
-				@CallingDataFactoryName = @CallingDataFactory
+				@CallingDataFactoryName = @CallingDataFactory,
+				@JobId = @JobId
 		END
 	--no restart considerations, just create new execution
 	ELSE
 		BEGIN
 			IF EXISTS --edge case, if all current workers succeeded, or some other not understood situation, archive records
 				(
-				SELECT * FROM [procfwk].[CurrentExecution]
+				SELECT * FROM [procfwk].[CurrentExecution] WHERE [JobId] = @JobId 
 				)
 				BEGIN
 					EXEC [procfwk].[UpdateExecutionLog]
+						@JobId = @JobId,
 						@PerformErrorCheck = 0;
 				END
 
 			EXEC [procfwk].[CreateNewExecution] 
-				@CallingDataFactoryName = @CallingDataFactory
+				@CallingDataFactoryName = @CallingDataFactory,
+				@JobId = @JobId
+
 		END
 END;
